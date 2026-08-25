@@ -1,4 +1,4 @@
-import {MarkdownPostProcessorContext, request} from "obsidian";
+import {MarkdownPostProcessorContext, request, requestUrl} from "obsidian";
 import {DEFAULT_SETTINGS} from "../settings";
 import * as plantuml from "plantuml-encoder";
 import PlantumlPlugin from "../main";
@@ -8,8 +8,16 @@ import {insertAsciiImage, insertImageWithMap, insertSvgImage} from "../functions
 export class ServerProcessor implements Processor {
     plugin: PlantumlPlugin;
 
+    //Docker deploys do not serve the dark mode endpoints yet
+    readonly isDockerDarkModeEndpointBroken = true;
+
     constructor(plugin: PlantumlPlugin) {
         this.plugin = plugin;
+    }
+
+    //This is an assumption that might not be true for all cases
+    private isDockerServer(): boolean{
+        return this.plugin.settings.server_url.length>0;
     }
 
     private getUrl(): string {
@@ -22,10 +30,16 @@ export class ServerProcessor implements Processor {
     }
 
     svg = async(source: string, el: HTMLElement, _: MarkdownPostProcessorContext) => {
-        const imageUrlBase = this.getUrl() + (this.isDark() ? "/dsvg/" : "/svg/");
+        const endpoint = this.isDark()||(this.isDockerServer()&&!this.isDockerDarkModeEndpointBroken)?"/dsvg/":"/svg/"
+        const imageUrlBase = this.getUrl() + endpoint;
+        const headers = this.isDark()?{"X-Preferred-Color-Mapper": "DARK_MODE"}:{}
         const encodedDiagram = plantuml.encode(source);
 
-        request({url: imageUrlBase + encodedDiagram, method: 'GET'}).then((value: string) => {
+        request({
+            url: imageUrlBase + encodedDiagram,
+            method: 'GET',
+            headers
+        }).then((value: string) => {
             insertSvgImage(el, value);
         }).catch((error: Error) => {
             if (error)
@@ -35,10 +49,22 @@ export class ServerProcessor implements Processor {
 
     png = async(source: string, el: HTMLElement, _: MarkdownPostProcessorContext) => {
         const url = this.getUrl();
-        const imageUrlBase = url + (this.isDark() ? "/dpng/" : "/png/");
-
+        const endpoint = this.isDark()||(this.isDockerServer()&& !this.isDockerDarkModeEndpointBroken)?"/dpng/":"/png/"
+        const headers = this.isDark()?{"X-Preferred-Color-Mapper": "DARK_MODE"}:{}
+        const imageUrlBase = url + endpoint;
         const encodedDiagram = plantuml.encode(source);
-        const image = imageUrlBase + encodedDiagram;
+
+        const response = await requestUrl({
+        url: imageUrlBase + encodedDiagram,
+        method: "GET",
+        headers
+        });
+        const bytes = new Uint8Array(response.arrayBuffer);
+        let binary = "";
+        for (const byte of bytes){
+            binary += String.fromCharCode(byte);
+        }
+        const image = btoa(binary);
 
         //get image map data to support clicking links in diagrams
         const mapUrlBase = url + "/map/";

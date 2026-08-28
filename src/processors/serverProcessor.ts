@@ -28,7 +28,7 @@ export class ServerProcessor implements Processor {
 
     svg = async(source: string, el: HTMLElement, _: MarkdownPostProcessorContext) => {
         //Docker deploys do not serve the dark mode endpoints
-        const endpoint = this.isDark()||!this.isDockerServer()?"/dsvg/":"/svg/"
+        const endpoint = this.isDark()&&!this.isDockerServer()?"/dsvg/":"/svg/"
         const imageUrlBase = this.getUrl() + endpoint;
         const headers = this.isDark()?{"X-Preferred-Color-Mapper": "DARK_MODE"}:{}
         const encodedDiagram = plantuml.encode(source);
@@ -48,7 +48,7 @@ export class ServerProcessor implements Processor {
     png = async(source: string, el: HTMLElement, _: MarkdownPostProcessorContext) => {
         const url = this.getUrl();
         //Docker deploys do not serve the dark mode endpoints
-        const endpoint = this.isDark()||!this.isDockerServer()?"/dpng/":"/png/"
+        const endpoint = this.isDark()&&!this.isDockerServer()?"/dpng/":"/png/"
         const headers = this.isDark()?{"X-Preferred-Color-Mapper": "DARK_MODE"}:{}
         const imageUrlBase = url + endpoint;
         const encodedDiagram = plantuml.encode(source);

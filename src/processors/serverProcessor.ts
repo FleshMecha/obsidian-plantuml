@@ -14,7 +14,7 @@ export class ServerProcessor implements Processor {
 
     //This is an assumption that might not be true for all cases
     private isDockerServer(): boolean{
-        return this.plugin.settings.server_url.length>0;
+        return this.plugin.settings.docker_server;
     }
 
     private getUrl(): string {

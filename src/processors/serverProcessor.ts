@@ -8,9 +8,6 @@ import {insertAsciiImage, insertImageWithMap, insertSvgImage} from "../functions
 export class ServerProcessor implements Processor {
     plugin: PlantumlPlugin;
 
-    //Docker deploys do not serve the dark mode endpoints yet
-    readonly isDockerDarkModeEndpointBroken = true;
-
     constructor(plugin: PlantumlPlugin) {
         this.plugin = plugin;
     }
@@ -30,7 +27,8 @@ export class ServerProcessor implements Processor {
     }
 
     svg = async(source: string, el: HTMLElement, _: MarkdownPostProcessorContext) => {
-        const endpoint = this.isDark()||(this.isDockerServer()&&!this.isDockerDarkModeEndpointBroken)?"/dsvg/":"/svg/"
+        //Docker deploys do not serve the dark mode endpoints
+        const endpoint = this.isDark()||!this.isDockerServer()?"/dsvg/":"/svg/"
         const imageUrlBase = this.getUrl() + endpoint;
         const headers = this.isDark()?{"X-Preferred-Color-Mapper": "DARK_MODE"}:{}
         const encodedDiagram = plantuml.encode(source);
@@ -49,7 +47,8 @@ export class ServerProcessor implements Processor {
 
     png = async(source: string, el: HTMLElement, _: MarkdownPostProcessorContext) => {
         const url = this.getUrl();
-        const endpoint = this.isDark()||(this.isDockerServer()&& !this.isDockerDarkModeEndpointBroken)?"/dpng/":"/png/"
+        //Docker deploys do not serve the dark mode endpoints
+        const endpoint = this.isDark()||!this.isDockerServer()?"/dpng/":"/png/"
         const headers = this.isDark()?{"X-Preferred-Color-Mapper": "DARK_MODE"}:{}
         const imageUrlBase = url + endpoint;
         const encodedDiagram = plantuml.encode(source);
